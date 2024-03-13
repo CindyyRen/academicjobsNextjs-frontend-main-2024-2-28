@@ -21,8 +21,14 @@ import { toast } from 'react-toastify';
 import { registerUser } from './action';
 import { useRouter } from 'next/navigation';
 import { SignUpFormSchema } from '@/app/schemas/schemas';
+import { signIn } from 'next-auth/react';
 
-const SignUpForm = () => {
+interface SignUpFormProps {
+  callbackUrl?: string;
+}
+
+const SignUpForm = (props: SignUpFormProps) => {
+  let callbackUrl = props.callbackUrl ? props.callbackUrl : '/';
   const router = useRouter();
   const form = useForm<z.infer<typeof SignUpFormSchema>>({
     resolver: zodResolver(SignUpFormSchema),
@@ -33,7 +39,6 @@ const SignUpForm = () => {
       confirmPassword: '',
     },
   });
-
   const saveUser = async (data: z.infer<typeof SignUpFormSchema>) => {
     const { confirmPassword, ...user } = data;
     try {
@@ -41,6 +46,12 @@ const SignUpForm = () => {
       if (result.success) {
         toast('successfully signed up');
         router.push('/auth/signin');
+        await signIn('credentials', {
+          redirect: false,
+          email: data.email,
+          password: data.password,
+        });
+        router.push(callbackUrl);
       }
     } catch (error) {
       if (error instanceof Error && error.message === 'Email already exists') {
